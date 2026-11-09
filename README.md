@@ -85,31 +85,31 @@ Usem os PDFs do ZIP. Se rodarem `gerar_certificados_ficticios.py` em outro compu
 8. `estadoDoCertificado(hash CERT-0001)` → **0** (Inexistente). Este é o "antes".
 9. Account **Conta 2** → `emitirCertificado(0xc8817a6e…bec1)` (hash completo do CERT-0001) → **transact**.
 10. Esperado: transação aceita (✔ no terminal). `estadoDoCertificado(hash CERT-0001)` → **1** (Valido). `verificarCertificado(hash CERT-0001)` mostra o emissor = Conta 2 e o nome da entidade.
-11. Captura: `evidencias/T01_emissao.png` (Account, função, valor, terminal e consulta).
+11. Capturas: `evidencias/T01_1_antes.png` a `T01_4_depois.png` (Account, função, valor, terminal e consulta).
 
 **T02 — mudança de estado do mesmo registro (positivo)**
 
 12. Account **Conta 2** → `revogarCertificado(hashCertificado = hash CERT-0001, motivo = 1)` → **transact**.
 13. Esperado: aceita. `estadoDoCertificado(hash CERT-0001)` → **2** (Revogado). `verificarCertificado` mostra `revogadoEm` preenchido e `motivo = 1`.
-14. Captura: `evidencias/T02_revogacao.png`.
+14. Capturas: `evidencias/T02_1_transacao.png` e `T02_2_depois.png`.
 
 **T03 — conta sem permissão tenta revogar (negativo)**
 
 15. Preparação: Account **Conta 2** → `emitirCertificado(hash CERT-0002)` → estado **1** (Valido). O T03 usa um **segundo** certificado ainda válido; se usasse o CERT-0001, já revogado, a rejeição viria do estado e não da permissão.
 16. Account **Conta 3** (Emissor B, credenciado, mas não emitiu o CERT-0002) → `revogarCertificado(hash CERT-0002, 2)` → **transact**.
 17. Esperado: transação **revertida** com `Somente o emissor do certificado`. `estadoDoCertificado(hash CERT-0002)` continua **1**.
-18. Captura: `evidencias/T03_rejeicao_permissao.png`.
+18. Capturas: `evidencias/T03_1_preparacao.png` a `T03_3_depois.png`.
 
 **T04 — conta não credenciada tenta emitir (negativo)**
 
 19. Account **Conta 4** → `emitirCertificado(hash CERT-0003)` → **transact**.
 20. Esperado: **revertida** com `Emissor nao autorizado`. `estadoDoCertificado(hash CERT-0003)` continua **0**.
-21. Captura: `evidencias/T04_rejeicao_nao_credenciado.png`.
+21. Capturas: `evidencias/T04_1_rejeicao.png` e `T04_2_depois.png`.
 
 **T05 — documento adulterado (verificação)**
 
 22. Account **Conta 5** → `verificarCertificado(hash CERT-0002_adulterado)` → retorna estado **0** (Inexistente), enquanto o CERT-0002 original retorna **1**.
-23. Captura: `evidencias/T05_documento_adulterado.png`.
+23. Capturas: `evidencias/T05_1_adulterado.png` e `T05_2_original.png`.
 
 Se a página do Remix for recarregada, o contrato e os dados somem. O código fica salvo, mas é preciso repetir a partir do passo 3.
 
@@ -126,16 +126,18 @@ A saída registrada está em `evidencias/execucao_testes_local.txt`. Os endereç
 
 ## 5. Testes executados
 
-Executados no Remix em 08/11/2026 (Remix IDE 2.6.13, Remix VM (Osaka), solc 0.8.28). Todos tiveram o resultado esperado.
+Executados no Remix em 09/11/2026 (Remix IDE 2.6.13, Remix VM (Osaka), solc 0.8.28), com o contrato implantado em `0xd9145CCE52D386f254917e481eB44e9943F39138`. Todos tiveram o resultado esperado. As capturas estão em `evidencias/`.
 
-| ID | Tipo | O que testa | Evidência |
+| ID | Tipo | O que testa | Evidências |
 |---|---|---|---|
-| Prep. | — | Deploy pela Account 1 e credenciamento dos emissores A e B | `00_preparacao_deploy_e_credenciamento.png` |
-| T01 | Positivo | Emissor A emite o CERT-0001 (Inexistente → Valido) | `T01_emissao.png`, `terminal_remix.txt` |
-| T02 | Positivo | Emissor A revoga o CERT-0001 (Valido → Revogado) | `T02_revogacao.png`, `terminal_remix.txt` |
-| T03 | Negativo | Emissor B tenta revogar o CERT-0002 do Emissor A: rejeitado, continua Valido | `T03_rejeicao_permissao.png`, `terminal_remix.txt` |
-| T04 | Negativo | Conta 4, não credenciada, tenta emitir: rejeitada, continua Inexistente | `T04_rejeicao_nao_credenciado.png`, `terminal_remix.txt` |
-| T05 | Verificação | Hash do PDF adulterado não é reconhecido (Inexistente) | `T05_documento_adulterado.png`, `terminal_remix.txt` |
+| Prep. | — | Deploy pela Account 1, credenciamento dos emissores A e B e conferência do emissor ativo | `P1_deploy.png`, `P2_credenciamento.png`, `P3_emissor_ativo.png` (ver nota abaixo) |
+| T01 | Positivo | Emissor A emite o CERT-0001: Inexistente → Valido (94106 gas) | `T01_1_antes.png`, `T01_2_transacao.png`, `T01_3_detalhes.png`, `T01_4_depois.png` |
+| T02 | Positivo | Emissor A revoga o CERT-0001 com motivo 1: Valido → Revogado | `T02_1_transacao.png`, `T02_2_depois.png` |
+| T03 | Negativo | Emissor B tenta revogar o CERT-0002 do Emissor A: revert "Somente o emissor do certificado", continua Valido | `T03_1_preparacao.png`, `T03_2_rejeicao.png`, `T03_3_depois.png` |
+| T04 | Negativo | Account 4, não credenciada, tenta emitir o CERT-0003: revert "Emissor nao autorizado", continua Inexistente | `T04_1_rejeicao.png`, `T04_2_depois.png` |
+| T05 | Verificação | Hash do PDF adulterado retorna Inexistente; o original continua Valido | `T05_1_adulterado.png`, `T05_2_original.png` |
+
+Nota sobre a preparação: `P1` a `P3` foram capturadas depois dos testes, numa segunda implantação feita na mesma sessão (contrato `0xD7ACd2a9FD159E69Bb102A1ca21C9a3e3A5F771B`), com os nomes das entidades sem o sufixo "(ficticia)". A preparação do contrato usado nos testes (deploy, os dois `credenciarEmissor` e a consulta `emissores`) aparece no terminal da captura `T01_2_transacao.png`, todas com sucesso.
 
 Complemento: `evidencias/execucao_testes_local.txt` traz os mesmos T01 a T05 executados automaticamente numa EVM local (`src/teste_local.py`). O custo do T01 (94106 gas) foi igual no Remix e na execução local.
 
@@ -153,4 +155,4 @@ Complemento: `evidencias/execucao_testes_local.txt` traz os mesmos T01 a T05 exe
 - **Contrato-base RastreioLote** (Aula 6, FEAP 2026.2): referência e ponto de partida. O grupo manteve a organização (papéis e estados em enum, padrão verificações → efeitos → evento, função de hash e consulta de estado para os testes) e trocou o domínio: lote → certificado identificado por hash, papéis fixos → cadastro de emissores com situação Ativo/Inativo, `administrador` imutável → transferível, keccak256 → **SHA-256** (o mesmo algoritmo usado para os PDFs).
 - **Simulação rastreio_lote_sim.py** (Aula 6): o formato da saída de testes de `teste_local.py` segue o da função `teste(...)`.
 - **Bibliotecas:** reportlab (geração dos PDFs fictícios), web3.py, eth-tester/py-evm e py-solc-x (execução local).
-- **IA generativa:** Claude (Anthropic) apoiou a escrita do contrato adaptado, dos scripts Python e deste README. A IA também operou o Remix no navegador do computador do representante, com autorização dele, para executar T01 a T05 e capturar as evidências. O grupo conferiu as capturas e cada `require` com a tabela de permissões do CP2. Os detalhes estão nas seções 9 e 10 do formulário do CP3.
+- **IA generativa:** Claude (Anthropic) apoiou a escrita do contrato adaptado, dos scripts Python e deste README. A IA fez um ensaio da demonstração no Remix e escreveu o tutorial de execução; as evidências entregues foram executadas e capturadas pelo representante no Remix em 09/11/2026, e a IA conferiu cada captura com o resultado esperado. O grupo conferiu cada `require` com a tabela de permissões do CP2. Os detalhes estão nas seções 9 e 10 do formulário do CP3.
