@@ -1,0 +1,148 @@
+CertChain - CP3 - Saida do terminal do Remix IDE (texto copiado do terminal)
+=============================================================================
+Ambiente: Remix IDE 2.6.13 (remix.ethereum.org -> app.remix.live), Environment "Remix VM (Osaka)"
+Compilador: solc 0.8.28+commit.7893614a, otimizacao desligada | Arquivo: CertChain.sol
+Data: 08/11/2026 | Contrato implantado em 0xd9145CCE52D386f254917e481eB44e9943F39138
+
+Contas (Remix VM):
+  Account 1 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4  administrador (implantou)
+  Account 2 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2  Emissor A - Semana de Tecnologia FEAP (ficticia)
+  Account 3 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db  Emissor B - Empresa Parceira X (ficticia)
+  Account 4 0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB  sem permissao
+  Account 5 0x617F2E2fD72FD9D5503197092aC168c91465E7f2  verificador
+
+Ordem executada:
+  Preparacao: Deploy (Account 1); credenciarEmissor(Account 2, ...); credenciarEmissor(Account 3, ...)
+              -> as tres transacoes aparecem com sucesso nas capturas de 00_preparacao_deploy_e_credenciamento.png
+                 (o texto dessas tres entradas nao foi exportado pelo terminal, que as exibia recolhidas)
+  T01 antes : estadoDoCertificado(CERT-0001) -> 0 (Inexistente)
+  T01       : Account 2 emitirCertificado(CERT-0001) -> sucesso (status 1, 94106 gas)
+  T01 depois: verificarCertificado(CERT-0001) -> estado 1, emissor Account 2
+  T02       : Account 2 revogarCertificado(CERT-0001, 1) -> sucesso
+  T02 depois: verificarCertificado(CERT-0001) -> estado 2, motivo 1
+  Prep. T03 : Account 2 emitirCertificado(CERT-0002) -> sucesso
+  T03       : Account 3 revogarCertificado(CERT-0002, 2) -> REVERT "Somente o emissor do certificado"
+  T03 depois: verificarCertificado(CERT-0002) -> estado 1 (continua Valido)
+  T04       : Account 4 emitirCertificado(CERT-0003) -> REVERT "Emissor nao autorizado"
+  T04 depois: estadoDoCertificado(CERT-0003) -> 0 (Inexistente)
+  T05       : Account 5 verificarCertificado(CERT-0002_adulterado) -> estado 0; estadoDoCertificado(CERT-0002) -> 1
+
+Os valores retornados pelas consultas (call) aparecem no painel Deploy & Run, nas capturas T01 a T05.
+
+----------------------------- texto do terminal -----------------------------
+
+[call] from: 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
+to: CertChain.estadoDoCertificado(bytes32)
+data: 0xeaf...5bec1
+
+[vm] from: 0xAb8...35cb2
+to: CertChain.emitirCertificado(bytes32) 0xd91...39138
+value: 0 wei
+data: 0x643...5bec1
+logs: 1
+hash: 0x9d9...d1c6a
+status	1 Transaction mined and execution completed
+transaction hash	0x9d9f4bf873a658983b038c1219bc5b5821b46ae9b80d8190fdcc03fe71bd1c6a
+block hash	0xa47390635b0267523d671ff166557c2472addffb73f2e7f97c254b58b77af0c5
+block number	4
+from	0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+to	CertChain.emitirCertificado(bytes32) 0xd9145CCE52D386f254917e481eB44e9943F39138
+transaction cost	94106 gas
+execution cost	72530 gas
+output	0x
+decoded input	{
+	"bytes32 hashCertificado": "0xc8817a6e76282cd93ce4975dd11454ecbab71d6087a1704d42c94ae5acc5bec1"
+}
+decoded output	{}
+logs	[
+	{
+		"from": "0xd9145CCE52D386f254917e481eB44e9943F39138",
+		"topic": "0x668aca226f2fe9228659195f33f79a3deb7c4c56981d55d7132fbe761d2ef9d9",
+		"event": "CertificadoEmitido",
+		"args": {
+			"0": "0xc8817a6e76282cd93ce4975dd11454ecbab71d6087a1704d42c94ae5acc5bec1",
+			"1": "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2"
+		}
+	}
+]
+raw logs	[
+  {
+    "_type": "log",
+    "address": "0xd9145CCE52D386f254917e481eB44e9943F39138",
+    "blockHash": "0xa47390635b0267523d671ff166557c2472addffb73f2e7f97c254b58b77af0c5",
+    "blockNumber": 4,
+    "data": "0x",
+    "index": 1,
+    "topics": [
+      "0x668aca226f2fe9228659195f33f79a3deb7c4c56981d55d7132fbe761d2ef9d9",
+      "0xc8817a6e76282cd93ce4975dd11454ecbab71d6087a1704d42c94ae5acc5bec1",
+      "0x000000000000000000000000ab8483f64d9c6d1ecf9b849ae677dd3315835cb2"
+    ],
+    "transactionHash": "0x9d9f4bf873a658983b038c1219bc5b5821b46ae9b80d8190fdcc03fe71bd1c6a",
+    "transactionIndex": 0
+  }
+]
+
+[call] from: 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+to: CertChain.verificarCertificado(bytes32)
+data: 0x080...5bec1
+
+[vm] from: 0xAb8...35cb2
+to: CertChain.revogarCertificado(bytes32,uint8) 0xd91...39138
+value: 0 wei
+data: 0xe21...00001
+logs: 1
+hash: 0x4b9...6aae8
+
+[call] from: 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+to: CertChain.verificarCertificado(bytes32)
+data: 0x080...5bec1
+
+[vm] from: 0xAb8...35cb2
+to: CertChain.emitirCertificado(bytes32) 0xd91...39138
+value: 0 wei
+data: 0x643...20dc2
+logs: 1
+hash: 0x6f9...8b9ee
+
+[vm] from: 0x4B2...C02db
+to: CertChain.revogarCertificado(bytes32,uint8) 0xd91...39138
+value: 0 wei
+data: 0xe21...00002
+logs: 0
+hash: 0x2e1...ca37c
+transact to CertChain.revogarCertificado errored: Error occurred: Error occurred: revert.
+
+revert
+	The transaction has been reverted to the initial state.
+Reason provided by the contract: "Somente o emissor do certificado".
+If the transaction failed for not having enough gas, try increasing the gas limit gently.
+
+[call] from: 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+to: CertChain.verificarCertificado(bytes32)
+data: 0x080...20dc2
+
+[vm] from: 0x787...cabaB
+to: CertChain.emitirCertificado(bytes32) 0xd91...39138
+value: 0 wei
+data: 0x643...d0a11
+logs: 0
+hash: 0x0a7...bcbc8
+transact to CertChain.emitirCertificado errored: Error occurred: Error occurred: revert.
+
+revert
+	The transaction has been reverted to the initial state.
+Reason provided by the contract: "Emissor nao autorizado".
+If the transaction failed for not having enough gas, try increasing the gas limit gently.
+
+[call] from: 0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB
+to: CertChain.estadoDoCertificado(bytes32)
+data: 0xeaf...d0a11
+
+[call] from: 0x617F2E2fD72FD9D5503197092aC168c91465E7f2
+to: CertChain.verificarCertificado(bytes32)
+data: 0x080...274d8
+
+[call] from: 0x617F2E2fD72FD9D5503197092aC168c91465E7f2
+to: CertChain.estadoDoCertificado(bytes32)
+data: 0xeaf...20dc2

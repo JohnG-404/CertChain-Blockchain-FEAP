@@ -1,0 +1,76 @@
+=== CertChain - execucao local do CP3 (EVM py-evm via eth-tester) ===
+Data/hora (UTC): 2026-11-02 22:54:23
+Compilador: solc 0.8.28+commit.7893614a.Emscripten.clang | contrato: src/CertChain.sol
+  Conta 1 (administrador): 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+  Conta 2 (Emissor A): 0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF
+  Conta 3 (Emissor B): 0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69
+  Conta 4 (sem permissao): 0x1efF47bc3a10a45D4B230B5d10E37751FE6AA718
+  Conta 5 (verificador): 0xe1AB8145F7E55DC933d51a18c793F901A3A0b276
+
+[Passo 1] Conta 1 implanta CertChain em 0xF2E246BB76DF876Cef8b38ae84130F4F55De395b (gas 1919638)
+          administrador() = 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+[Passo 2] Conta 1 credenciarEmissor(0x2B5A...D6cF, "Semana de Tecnologia FEAP (ficticia)") -> aceita | tx 254846084e9144680b... | gas usado 117875
+          emissores(0x2B5A...D6cF) = ('Semana de Tecnologia FEAP (ficticia)', situacao 1 = Ativo)
+[Passo 2] Conta 1 credenciarEmissor(0x6813...BA69, "Empresa Parceira X (ficticia)") -> aceita | tx 7d2b9c2c72e0462595... | gas usado 72997
+          emissores(0x6813...BA69) = ('Empresa Parceira X (ficticia)', situacao 1 = Ativo)
+
+Hashes SHA-256 dos certificados ficticios (src/certificados_ficticios/):
+  CERT-0001.pdf              0xc8817a6e76282cd93ce4975dd11454ecbab71d6087a1704d42c94ae5acc5bec1
+  CERT-0002.pdf              0xc04f00c77193d987e0de79a6ad72b576819f03cc7cb28f43636de00e64e20dc2
+  CERT-0003.pdf              0xa89e7aa3dc0fbe6cf3f061ae6c62ffd4a6aca7b5333740368183654da1dd0a11
+  CERT-0002_adulterado.pdf   0x40aea5f7f903668e2622d6feb608b9f7e6df8a0da5f77e4a485986fcbfc274d8
+
+T01 [POSITIVO] Emissor A credenciado emite o certificado CERT-0001
+     conta: Conta 2 (Emissor A)
+     chamada: emitirCertificado(hash CERT-0001.pdf)
+     esperado: aceita; estado final Valido
+     observado: aceita | tx f0b46fefe585ece270... | gas usado 94106
+     estadoDoCertificado: antes = Inexistente | depois = Valido
+     verificarCertificado: estado=Valido, emissor=0x2B5A...D6cF ('Semana de Tecnologia FEAP (ficticia)'), emitidoEm=1793660067, revogadoEm=0, motivo=0
+     status: PASSOU
+
+T02 [POSITIVO] Emissor A revoga o CERT-0001 que ele emitiu (motivo 1 = erro de emissao)
+     conta: Conta 2 (Emissor A)
+     chamada: revogarCertificado(hash CERT-0001.pdf, 1)
+     esperado: aceita; estado final Revogado
+     observado: aceita | tx 347d4ff861e103301e... | gas usado 32664
+     estadoDoCertificado: antes = Valido | depois = Revogado
+     verificarCertificado: estado=Revogado, emissor=0x2B5A...D6cF ('Semana de Tecnologia FEAP (ficticia)'), emitidoEm=1793660067, revogadoEm=1793660068, motivo=1
+     status: PASSOU
+
+[Preparacao T03] Conta 2 emitirCertificado(hash CERT-0002.pdf) -> aceita | tx c3b4a4c888e1302155... | gas usado 76994
+     estadoDoCertificado(CERT-0002) = Valido
+
+T03 [NEGATIVO] Emissor B tenta revogar o CERT-0002, emitido pelo Emissor A
+     conta: Conta 3 (Emissor B)
+     chamada: revogarCertificado(hash CERT-0002.pdf, 2)
+     esperado: rejeitada; estado final Valido
+     observado: rejeitada (revert): execution reverted: Somente o emissor do certificado
+     estadoDoCertificado: antes = Valido | depois = Valido
+     verificarCertificado: estado=Valido, emissor=0x2B5A...D6cF ('Semana de Tecnologia FEAP (ficticia)'), emitidoEm=1793660069, revogadoEm=0, motivo=0
+     status: PASSOU
+
+T04 [NEGATIVO] Conta 4, nao credenciada, tenta emitir o CERT-0003
+     conta: Conta 4 (sem permissao)
+     chamada: emitirCertificado(hash CERT-0003.pdf)
+     esperado: rejeitada; estado final Inexistente
+     observado: rejeitada (revert): execution reverted: Emissor nao autorizado
+     estadoDoCertificado: antes = Inexistente | depois = Inexistente
+     status: PASSOU
+
+T05 [VERIFICACAO] Verificador consulta o hash da copia adulterada do CERT-0002 (12 h -> 120 h)
+     conta: Conta 5 (verificador)
+     chamada: verificarCertificado(hash CERT-0002_adulterado.pdf)
+     esperado: consulta retorna Inexistente
+     observado: consulta sem transacao; estado retornado = Inexistente
+     estadoDoCertificado: antes = Inexistente | depois = Inexistente
+     status: PASSOU
+
+     comparacao: o CERT-0002 original continua Valido; basta mudar a carga horaria
+     para o hash mudar e o documento nao ser reconhecido.
+
+Checagem extra: calcularHash("certificado-teste") no contrato = 0xafa478b852c505f68cd17cc476370dbd6abedd3a5b732e8ede0ddb62687887d8
+                SHA-256 no Python                     = 0xafa478b852c505f68cd17cc476370dbd6abedd3a5b732e8ede0ddb62687887d8
+                iguais: True
+
+Resumo: T01 PASSOU, T02 PASSOU, T03 PASSOU, T04 PASSOU, T05 PASSOU | totalCertificados = 2
