@@ -1,0 +1,168 @@
+=== CertChain - bateria de testes T01 a T19 (EVM local py-evm via eth-tester) ===
+Data/hora (UTC): 2026-11-13 23:42:41
+Contrato: src/historico/CertChain_CP3.sol | compilador: solc 0.8.28+commit.7893614a.Emscripten.clang
+  Account 1 (administrador): 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+  Account 2 (Emissor A): 0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF
+  Account 3 (Emissor B): 0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69
+  Account 4 (sem permissao): 0x1efF47bc3a10a45D4B230B5d10E37751FE6AA718
+  Account 5 (verificador): 0xe1AB8145F7E55DC933d51a18c793F901A3A0b276
+
+[Prep] Account 1 implanta o contrato em 0xF2E246BB76DF876Cef8b38ae84130F4F55De395b
+[Prep] Account 1 credenciarEmissor(Account 2 (Emissor A), "Semana de Tecnologia FEAP (ficticia)") -> aceita
+[Prep] Account 1 credenciarEmissor(Account 3 (Emissor B), "Empresa Parceira X (ficticia)") -> aceita
+
+Hashes usados:
+  CERT-0001.pdf                    0xc8817a6e76282cd93ce4975dd11454ecbab71d6087a1704d42c94ae5acc5bec1
+  CERT-0002.pdf                    0xc04f00c77193d987e0de79a6ad72b576819f03cc7cb28f43636de00e64e20dc2
+  CERT-0003.pdf                    0xa89e7aa3dc0fbe6cf3f061ae6c62ffd4a6aca7b5333740368183654da1dd0a11
+  CERT-0002_adulterado.pdf         0x40aea5f7f903668e2622d6feb608b9f7e6df8a0da5f77e4a485986fcbfc274d8
+  texto "CERT-0004 (teste CP4)"    0xc76c97a1531928a0609ea173eef4ff74d8209d9b328830362bc0e495ef397fa5
+  texto "CERT-0005 (teste CP4)"    0x867c729de9f12ffb3600160c264ffac1c9c07149b693f850c012e5fb6ef63bf9
+
+--- Testes do CP3 (regressao) ---
+
+T01 [Fluxo (positivo)] Emissor A emite o CERT-0001
+     conta: Account 2 (Emissor A)
+     chamada: emitirCertificado(CERT-0001)
+     esperado: aceita; estado = Valido
+     observado: aceita (94106 gas); estado = Valido
+     status: PASSOU
+
+T02 [Fluxo (positivo)] Emissor A revoga o CERT-0001 (motivo 1)
+     conta: Account 2 (Emissor A)
+     chamada: revogarCertificado(CERT-0001, 1)
+     esperado: aceita; estado = Revogado
+     observado: aceita (32664 gas); estado = Revogado
+     status: PASSOU
+
+[Prep] Account 2 emite o CERT-0002 -> estado Valido
+
+T03 [Permissoes] Emissor B tenta revogar o CERT-0002 do Emissor A
+     conta: Account 3 (Emissor B)
+     chamada: revogarCertificado(CERT-0002, 2)
+     esperado: rejeitada: "Somente o emissor do certificado"; estado = Valido
+     observado: rejeitada: "Somente o emissor do certificado"; estado = Valido
+     status: PASSOU
+
+T04 [Permissoes] Conta nao credenciada tenta emitir o CERT-0003
+     conta: Account 4 (sem permissao)
+     chamada: emitirCertificado(CERT-0003)
+     esperado: rejeitada: "Emissor nao autorizado"; estado = Inexistente
+     observado: rejeitada: "Emissor nao autorizado"; estado = Inexistente
+     status: PASSOU
+
+T05 [Verificacao] Hash da copia adulterada do CERT-0002 nao e reconhecido
+     conta: Account 5 (verificador)
+     chamada: verificarCertificado(CERT-0002_adulterado)
+     esperado: aceita; adulterado = Inexistente, original = Valido
+     observado: aceita; adulterado = Inexistente, original = Valido
+     status: PASSOU
+
+--- CP4: permissoes ---
+
+T06 [Permissoes] Emissor A (nao administrador) tenta credenciar a Account 4
+     conta: Account 2 (Emissor A)
+     chamada: credenciarEmissor(Account 4, "Entidade Indevida (ficticia)")
+     esperado: rejeitada: "Somente o administrador"; Account 4 = NaoCadastrado
+     observado: rejeitada: "Somente o administrador"; Account 4 = NaoCadastrado
+     status: PASSOU
+
+T07 [Permissoes] Emissor B tenta descredenciar o Emissor A
+     conta: Account 3 (Emissor B)
+     chamada: descredenciarEmissor(Account 2)
+     esperado: rejeitada: "Somente o administrador"; Account 2 = Ativo
+     observado: rejeitada: "Somente o administrador"; Account 2 = Ativo
+     status: PASSOU
+
+T08 [Permissoes] Conta sem permissao tenta se tornar administradora
+     conta: Account 4 (sem permissao)
+     chamada: transferirAdministracao(Account 4)
+     esperado: rejeitada: "Somente o administrador"; administrador = Account 1
+     observado: rejeitada: "Somente o administrador"; administrador = Account 1 (administrador)
+     status: PASSOU
+
+--- CP4: entradas invalidas ---
+
+T09 [Entradas invalidas] Emissor A tenta emitir um hash vazio (bytes32 zero)
+     conta: Account 2 (Emissor A)
+     chamada: emitirCertificado(0x000...000)
+     esperado: rejeitada: "Hash vazio"; totalCertificados = 2
+     observado: rejeitada: "Hash vazio"; totalCertificados = 2
+     status: PASSOU
+
+T10 [Entradas invalidas] Emissor A tenta revogar o CERT-0002 com motivo 0
+     conta: Account 2 (Emissor A)
+     chamada: revogarCertificado(CERT-0002, 0)
+     esperado: rejeitada: "Motivo invalido"; estado = Valido
+     observado: rejeitada: "Motivo invalido"; estado = Valido
+     status: PASSOU
+
+T11 [Entradas invalidas] Emissor A tenta revogar o CERT-0002 com motivo 4
+     conta: Account 2 (Emissor A)
+     chamada: revogarCertificado(CERT-0002, 4)
+     esperado: rejeitada: "Motivo invalido"; estado = Valido
+     observado: rejeitada: "Motivo invalido"; estado = Valido
+     status: PASSOU
+
+T12 [Entradas invalidas] Administrador tenta credenciar o endereco zero
+     conta: Account 1 (administrador)
+     chamada: credenciarEmissor(0x000...000, "Entidade X (ficticia)")
+     esperado: rejeitada: "Conta invalida"; endereco zero = NaoCadastrado
+     observado: rejeitada: "Conta invalida"; endereco zero = NaoCadastrado
+     status: PASSOU
+
+T13 [Entradas invalidas] Administrador tenta credenciar a Account 4 com nome vazio
+     conta: Account 1 (administrador)
+     chamada: credenciarEmissor(Account 4, "")
+     esperado: rejeitada: "Nome da entidade vazio"; Account 4 = NaoCadastrado
+     observado: rejeitada: "Nome da entidade vazio"; Account 4 = NaoCadastrado
+     status: PASSOU
+
+--- CP4: falhas e estado indevido ---
+
+T14 [Falhas/estado] Emissor A tenta emitir de novo o CERT-0002 (ja Valido)
+     conta: Account 2 (Emissor A)
+     chamada: emitirCertificado(CERT-0002)
+     esperado: rejeitada: "Certificado ja registrado"; emissor e emitidoEm do CERT-0002 inalterados
+     observado: rejeitada: "Certificado ja registrado"; emissor e emitidoEm do CERT-0002 inalterados
+     status: PASSOU
+
+T15 [Falhas/estado] Emissor A tenta revogar de novo o CERT-0001 (ja Revogado)
+     conta: Account 2 (Emissor A)
+     chamada: revogarCertificado(CERT-0001, 1)
+     esperado: rejeitada: "Certificado nao esta valido"; estado = Revogado
+     observado: rejeitada: "Certificado nao esta valido"; estado = Revogado
+     status: PASSOU
+
+T16 [Falhas/estado] Emissor A tenta revogar o CERT-0003, que nao existe
+     conta: Account 2 (Emissor A)
+     chamada: revogarCertificado(CERT-0003, 1)
+     esperado: rejeitada: "Certificado nao esta valido"; estado = Inexistente
+     observado: rejeitada: "Certificado nao esta valido"; estado = Inexistente
+     status: PASSOU
+
+[Prep] Account 3 emite o CERT-0003 (Valido) e o CERT-0004 (Valido); Account 1 descredencia a Account 3 -> Inativo
+
+T17 [Falhas/estado] Emissor B descredenciado tenta emitir o CERT-0005
+     conta: Account 3 (Emissor B)
+     chamada: emitirCertificado(CERT-0005)
+     esperado: rejeitada: "Emissor nao autorizado"; CERT-0005 = Inexistente, CERT-0003 = Valido
+     observado: rejeitada: "Emissor nao autorizado"; CERT-0005 = Inexistente, CERT-0003 = Valido
+     status: PASSOU
+
+T18 [Falhas/estado] Emissor B descredenciado tenta revogar o CERT-0003 que emitiu antes
+     conta: Account 3 (Emissor B)
+     chamada: revogarCertificado(CERT-0003, 2)
+     esperado: rejeitada: "Emissor nao autorizado"; estado = Valido
+     observado: aceita (32664 gas); estado = Revogado
+     status: FALHOU
+
+T19 [Permissoes] Administrador revoga o CERT-0004 do emissor descredenciado (motivo 2 = fraude)
+     conta: Account 1 (administrador)
+     chamada: revogarCertificado(CERT-0004, 2)
+     esperado: aceita; estado = Revogado
+     observado: rejeitada: "Somente o emissor do certificado"; estado = Valido
+     status: FALHOU
+
+Resumo: T01 PASSOU, T02 PASSOU, T03 PASSOU, T04 PASSOU, T05 PASSOU, T06 PASSOU, T07 PASSOU, T08 PASSOU, T09 PASSOU, T10 PASSOU, T11 PASSOU, T12 PASSOU, T13 PASSOU, T14 PASSOU, T15 PASSOU, T16 PASSOU, T17 PASSOU, T18 FALHOU, T19 FALHOU
+Total: 19 testes, 17 PASSOU, 2 FALHOU (T18, T19)

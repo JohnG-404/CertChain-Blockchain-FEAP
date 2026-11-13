@@ -10,8 +10,8 @@ e imprime o resultado de cada teste.
 Requer Python 3.8+ e:
     pip install web3 "eth-tester[py-evm]" py-solc-x
 Uso (na pasta que contem src/):
-    python src/teste_local.py
-    python src/teste_local.py > evidencias/execucao_testes_local.txt
+    python src/historico/teste_local_CP3.py
+    python src/historico/teste_local_CP3.py > evidencias/execucao_testes_local.txt
 
 Na primeira execucao, o py-solc-x baixa o compilador solc 0.8.28.
 Opcao: --artefato ARQUIVO.json usa ABI e bytecode ja compilados
@@ -25,7 +25,7 @@ from pathlib import Path
 
 from web3 import Web3, EthereumTesterProvider
 
-SRC = Path(__file__).resolve().parent
+SRC = Path(__file__).resolve().parent.parent  # pasta src/ (script movido para src/historico no CP4)
 PDFS = SRC / "certificados_ficticios"
 ESTADOS = {0: "Inexistente", 1: "Valido", 2: "Revogado"}
 VERSAO_SOLC = "0.8.28"
@@ -39,7 +39,7 @@ def compilar():
     import solcx
     if VERSAO_SOLC not in [str(v) for v in solcx.get_installed_solc_versions()]:
         solcx.install_solc(VERSAO_SOLC)
-    saida = solcx.compile_files([str(SRC / "CertChain.sol")], output_values=["abi", "bin"],
+    saida = solcx.compile_files([str(SRC / "historico" / "CertChain_CP3.sol")], output_values=["abi", "bin"],
                                 solc_version=VERSAO_SOLC, evm_version="cancun")
     contrato = next(v for k, v in saida.items() if k.endswith(":CertChain"))
     return contrato["abi"], contrato["bin"], "solc " + VERSAO_SOLC

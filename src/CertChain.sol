@@ -13,6 +13,11 @@ pragma solidity ^0.8.24;
  *  testes) e trocamos o domínio "lote de resina" pelo domínio do
  *  projeto: emissores credenciados registram o hash de certificados.
  *
+ *  HISTÓRICO
+ *  - CP3 (09/11/2026): primeira versão funcional (src/historico/CertChain_CP3.sol).
+ *  - CP4 (13/11/2026): ajuste em revogarCertificado após os testes T18 e T19:
+ *    emissor descredenciado não revoga mais; o administrador pode revogar.
+ *
  *  USO EXCLUSIVAMENTE EDUCACIONAL
  *  - Executar somente no Remix VM (blockchain simulada no navegador).
  *  - Usar apenas contas de teste do Remix e certificados fictícios.
@@ -25,7 +30,8 @@ pragma solidity ^0.8.24;
  *
  *  PARTICIPANTES (CP2, seção 4.2)
  *  - Administrador (governança): credencia e descredencia emissores.
- *  - Emissor credenciado: emite e revoga os próprios certificados.
+ *  - Emissor credenciado (Ativo): emite e revoga os próprios certificados.
+ *  - Administrador também pode revogar qualquer certificado válido (CP4).
  *  - Verificador / aluno / empresa: apenas consultam (funções view).
  * =====================================================================
  */
@@ -87,7 +93,7 @@ contract CertChain {
     event EmissorCredenciado(address indexed emissor, string nomeEntidade);
     event EmissorDescredenciado(address indexed emissor);
     event CertificadoEmitido(bytes32 indexed hashCertificado, address indexed emissor);
-    event CertificadoRevogado(bytes32 indexed hashCertificado, address indexed emissor, uint8 motivo);
+    event CertificadoRevogado(bytes32 indexed hashCertificado, address indexed revogadoPor, uint8 motivo);
 
     // -----------------------------------------------------------------
     // 4. IMPLANTAÇÃO
@@ -160,15 +166,25 @@ contract CertChain {
         emit CertificadoEmitido(hashCertificado, msg.sender);
     }
 
-    /// O emissor que emitiu o certificado o revoga, informando o motivo
+    /// Revoga um certificado válido, informando o motivo
     /// (1 = erro de emissão, 2 = fraude, 3 = cancelamento).
+    /// Quem pode revogar (regra ajustada no CP4, testes T18 e T19):
+    ///  - o emissor que emitiu o certificado, desde que ainda esteja Ativo;
+    ///  - o administrador (governança), por exemplo para revogar um
+    ///    certificado fraudulento de um emissor já descredenciado.
     /// Estado: Valido -> Revogado
     function revogarCertificado(bytes32 hashCertificado, uint8 motivo) external {
         Certificado storage cert = certificados[hashCertificado];
+        bool ehAdministrador = msg.sender == administrador;
 
         // A verificação de estado também rejeita hash inexistente e revogação repetida.
         require(cert.estado == Estado.Valido, "Certificado nao esta valido");
-        require(msg.sender == cert.emissor, "Somente o emissor do certificado");
+        require(ehAdministrador || msg.sender == cert.emissor, "Somente o emissor do certificado");
+        // CP4: um emissor descredenciado não altera mais o registro (antes ele conseguia revogar).
+        require(
+            ehAdministrador || emissores[msg.sender].situacao == SituacaoEmissor.Ativo,
+            "Emissor nao autorizado"
+        );
         require(motivo >= MOTIVO_ERRO_EMISSAO && motivo <= MOTIVO_CANCELAMENTO, "Motivo invalido");
 
         cert.estado = Estado.Revogado;

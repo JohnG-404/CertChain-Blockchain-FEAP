@@ -1,4 +1,6 @@
-# CertChain — CP3 (primeira versão funcional)
+# CertChain — CP4 (validação e ajustes)
+
+Protótipo do Projeto Integrador de Blockchain e Criptomoedas (FEAP 2026.2). O CP4 testou permissões, entradas inválidas e situações de falha do contrato entregue no CP3, corrigiu as duas falhas encontradas (T18 e T19) e repetiu todos os testes.
 
 ## 1. Identificação
 
@@ -10,33 +12,40 @@
 | Caminho | Trilha fundamental: contrato-base RastreioLote adaptado, executado no **Remix VM** |
 | Representante | João Gabriel Pereira Cardozo |
 | Repositório | https://github.com/JohnG-404/CertChain-Blockchain-FEAP |
+| Manifesto | `manifesto.json` (grupo, integrantes, trilha e arquivo principal) |
 
-## 2. O que já funciona?
+## 2. O que funciona?
 
-Fluxo executado sobre o **mesmo registro** (o certificado identificado pelo hash SHA-256 do PDF):
+Fluxo sobre o **mesmo registro** (o certificado identificado pelo hash SHA-256 do PDF):
 
 1. `constructor` — a conta que implanta vira **administradora** (governança).
-2. `credenciarEmissor(conta, nomeEntidade)` — o administrador credencia emissores.
+2. `credenciarEmissor(conta, nomeEntidade)` / `descredenciarEmissor(conta)` — o administrador controla quem emite.
 3. `emitirCertificado(hash)` — **cria o registro**: Inexistente → **Valido**. Só emissor Ativo.
-4. `revogarCertificado(hash, motivo)` — **muda o estado**: Valido → **Revogado**. Só o emissor que emitiu.
+4. `revogarCertificado(hash, motivo)` — **muda o estado**: Valido → **Revogado**. Regra ajustada no CP4: o emissor que emitiu, **desde que ainda esteja Ativo**, ou o **administrador**.
 5. `estadoDoCertificado(hash)` e `verificarCertificado(hash)` — **consultas** que mostram o antes e o depois.
+6. `transferirAdministracao(novo)` e `calcularHash(texto)` (SHA-256 de um texto, para testes).
 
-Também implementados (testes completos ficam para o CP4): `descredenciarEmissor`, `transferirAdministracao` e `calcularHash` (SHA-256 de um texto).
+### Ajuste do CP4 (antes × depois)
 
-**Ainda não funciona ou não foi testado:** todos os testes de entradas inválidas e de governança (hash vazio, hash duplicado, motivo inválido, revogação repetida, emissor descredenciado, conta que não é a administradora). Isso fica para o CP4. A versão em banco de dados para comparação está prevista para o CP4.
+| Teste | Situação | Contrato do CP3 (`src/historico/CertChain_CP3.sol`) | Contrato do CP4 (`src/CertChain.sol`) |
+|---|---|---|---|
+| T18 | Emissor B **descredenciado** tenta revogar um certificado que emitiu antes | Aceitava: o certificado virava Revogado (**FALHOU**) | Rejeita com `Emissor nao autorizado`; continua Valido (**PASSOU**) |
+| T19 | Administrador revoga, por fraude, um certificado do emissor descredenciado | Rejeitava com `Somente o emissor do certificado`: ninguém conseguia revogar (**FALHOU**) | Aceita; o certificado vira Revogado (**PASSOU**) |
+
+Mudanças no código: dois `require` em `revogarCertificado` e o evento `CertificadoRevogado`, que passou a registrar **quem revogou** (`revogadoPor`) em vez do emissor. O resto do contrato não mudou.
 
 ## 3. O que é preciso para executar?
 
 | Item | Detalhe |
 |---|---|
-| Ferramenta | Navegador com https://remix.ethereum.org |
-| Ambiente | Deploy & Run → Environment: **Remix VM** (usamos Remix VM (Osaka); remix.ethereum.org hoje redireciona para app.remix.live) |
+| Ferramenta | Navegador com https://app.remix.live (remix.ethereum.org redireciona para lá) |
+| Ambiente | Deploy & Run → Environment: **Remix VM** (usamos Remix VM (Osaka)) |
 | Compilador | Solidity **0.8.24 ou superior** (testado com 0.8.28), otimização desligada |
-| Arquivo principal | `src/CertChain.sol` |
+| Arquivo principal | `src/CertChain.sol` (versão do CP4); versão do CP3 em `src/historico/CertChain_CP3.sol` |
 | Dados de teste | `src/certificados_ficticios/*.pdf` (fictícios, sem dados reais) |
-| Opcional | Python 3.8+ para `src/gerar_hash.py` (sem bibliotecas externas) e para `src/teste_local.py` (`pip install web3 "eth-tester[py-evm]" py-solc-x`) |
+| Testes automatizados | Python 3.8+ e `pip install web3 "eth-tester[py-evm]" py-solc-x` para `src/executar_testes.py` |
 
-Não há dependências, carteiras nem chaves: só as contas de teste do Remix VM.
+Não há carteiras nem chaves: só as contas de teste do Remix VM.
 
 ## 4. Como repetir a demonstração (Remix VM)
 
@@ -113,46 +122,93 @@ Usem os PDFs do ZIP. Se rodarem `gerar_certificados_ficticios.py` em outro compu
 
 Se a página do Remix for recarregada, o contrato e os dados somem. O código fica salvo, mas é preciso repetir a partir do passo 3.
 
-### 4.4 Execução automatizada (complementar)
+### 4.4 Testes do CP4 no Remix (continuação da mesma sessão)
 
-`src/teste_local.py` repete o mesmo fluxo e os testes T01 a T05 numa EVM local (py-evm), com o mesmo contrato:
+Depois do T05, sem recarregar a página, continuem com as mesmas contas. Dois hashes extras são de textos fictícios (no Remix, `calcularHash` com o texto exato dá o mesmo valor):
+
+| Texto | Hash SHA-256 (bytes32) |
+|---|---|
+| `CERT-0004 (teste CP4)` | `0xc76c97a1531928a0609ea173eef4ff74d8209d9b328830362bc0e495ef397fa5` |
+| `CERT-0005 (teste CP4)` | `0x867c729de9f12ffb3600160c264ffac1c9c07149b693f850c012e5fb6ef63bf9` |
+
+| ID | Conta | Chamada | Esperado (contrato do CP4) | Captura sugerida |
+|---|---|---|---|---|
+| T06 | Conta 2 | `credenciarEmissor(Conta 4, "Entidade Indevida (ficticia)")` | revert `Somente o administrador` | `evidencias/CP4/T06_rejeicao.png` |
+| T07 | Conta 3 | `descredenciarEmissor(Conta 2)` | revert `Somente o administrador` | `evidencias/CP4/T07_rejeicao.png` |
+| T08 | Conta 4 | `transferirAdministracao(Conta 4)`; depois `administrador` | revert `Somente o administrador`; administrador = Conta 1 | `evidencias/CP4/T08_rejeicao.png` |
+| T09 | Conta 2 | `emitirCertificado(0x` + 64 zeros`)` | revert `Hash vazio` | `evidencias/CP4/T09_rejeicao.png` |
+| T10 | Conta 2 | `revogarCertificado(CERT-0002, 0)` | revert `Motivo invalido`; CERT-0002 continua 1 | `evidencias/CP4/T10_rejeicao.png` |
+| T11 | Conta 2 | `revogarCertificado(CERT-0002, 4)` | revert `Motivo invalido` | `evidencias/CP4/T11_rejeicao.png` |
+| T12 | Conta 1 | `credenciarEmissor(0x0000000000000000000000000000000000000000, "Entidade X (ficticia)")` | revert `Conta invalida` | `evidencias/CP4/T12_rejeicao.png` |
+| T13 | Conta 1 | `credenciarEmissor(Conta 4, "")` (nome em branco) | revert `Nome da entidade vazio` | `evidencias/CP4/T13_rejeicao.png` |
+| T14 | Conta 2 | `emitirCertificado(CERT-0002)` (já Valido) | revert `Certificado ja registrado` | `evidencias/CP4/T14_rejeicao.png` |
+| T15 | Conta 2 | `revogarCertificado(CERT-0001, 1)` (já Revogado) | revert `Certificado nao esta valido` | `evidencias/CP4/T15_rejeicao.png` |
+| T16 | Conta 2 | `revogarCertificado(CERT-0003, 1)` (não existe) | revert `Certificado nao esta valido` | `evidencias/CP4/T16_rejeicao.png` |
+| Prep. | Conta 3, depois Conta 1 | Conta 3 emite o CERT-0003 e o `CERT-0004 (teste CP4)`; Conta 1 `descredenciarEmissor(Conta 3)` | tudo aceito; Conta 3 fica Inativa (situacao 2) | `evidencias/CP4/T17_preparacao.png` |
+| T17 | Conta 3 | `emitirCertificado(CERT-0005 (teste CP4))` | revert `Emissor nao autorizado`; CERT-0003 continua 1 | `evidencias/CP4/T17_rejeicao.png` |
+| T18 | Conta 3 | `revogarCertificado(CERT-0003, 2)` | revert `Emissor nao autorizado`; CERT-0003 continua 1 | `evidencias/CP4/T18_depois_CP4.png` |
+| T19 | Conta 1 | `revogarCertificado(CERT-0004 (teste CP4), 2)` | aceita; CERT-0004 vira 2 (Revogado) | `evidencias/CP4/T19_depois_CP4.png` |
+
+Para mostrar o **antes** do ajuste: implantem `src/historico/CertChain_CP3.sol` (Deploy de novo, pela Conta 1), credenciem a Conta 3, emitam com ela o CERT-0003 e o CERT-0004, descredenciem-na e repitam T18 e T19. No contrato do CP3, o T18 é aceito e o T19 é rejeitado (capturas `evidencias/CP4/T18_antes_CP3.png` e `T19_antes_CP3.png`).
+
+### 4.5 Execução automatizada (todos os testes, T01 a T19)
+
+`src/executar_testes.py` repete o fluxo e os 19 testes numa EVM local (py-evm), na mesma ordem da tabela acima, e compara o observado com o esperado:
 
 ```
 pip install web3 "eth-tester[py-evm]" py-solc-x
-python src/teste_local.py
+python src/executar_testes.py                                        # contrato do CP4
+python src/executar_testes.py --contrato src/historico/CertChain_CP3.sol   # contrato do CP3 (antes)
+python src/executar_testes.py --csv testes/resultado_local.csv       # também grava um CSV
 ```
 
-A saída registrada está em `evidencias/execucao_testes_local.txt`. Os endereços das contas nessa EVM são diferentes dos do Remix, mas os papéis são os mesmos.
+Na primeira execução, o py-solc-x baixa o compilador solc 0.8.28. As saídas registradas estão em `evidencias/CP4/CP4_depois_contrato_CP4.txt` (19 PASSOU) e `evidencias/CP4/CP4_antes_contrato_CP3.txt` (17 PASSOU, T18 e T19 FALHOU). Os endereços das contas na EVM local são diferentes dos do Remix, mas os papéis são os mesmos.
 
 ## 5. Testes executados
 
-Executados no Remix em 09/11/2026 (Remix IDE 2.6.13, Remix VM (Osaka), solc 0.8.28), com o contrato implantado em `0xd9145CCE52D386f254917e481eB44e9943F39138`. Todos tiveram o resultado esperado. As capturas estão em `evidencias/`.
+O detalhamento de cada teste (conta, função, entradas, estado inicial, esperado, observado, status e evidência) está em **`testes/casos.csv`**.
 
-| ID | Tipo | O que testa | Evidências |
-|---|---|---|---|
-| Prep. | — | Deploy pela Account 1, credenciamento dos emissores A e B e conferência do emissor ativo | `P1_deploy.png`, `P2_credenciamento.png`, `P3_emissor_ativo.png` (ver nota abaixo) |
-| T01 | Positivo | Emissor A emite o CERT-0001: Inexistente → Valido (94106 gas) | `T01_1_antes.png`, `T01_2_transacao.png`, `T01_3_detalhes.png`, `T01_4_depois.png` |
-| T02 | Positivo | Emissor A revoga o CERT-0001 com motivo 1: Valido → Revogado | `T02_1_transacao.png`, `T02_2_depois.png` |
-| T03 | Negativo | Emissor B tenta revogar o CERT-0002 do Emissor A: revert "Somente o emissor do certificado", continua Valido | `T03_1_preparacao.png`, `T03_2_rejeicao.png`, `T03_3_depois.png` |
-| T04 | Negativo | Account 4, não credenciada, tenta emitir o CERT-0003: revert "Emissor nao autorizado", continua Inexistente | `T04_1_rejeicao.png`, `T04_2_depois.png` |
-| T05 | Verificação | Hash do PDF adulterado retorna Inexistente; o original continua Valido | `T05_1_adulterado.png`, `T05_2_original.png` |
+| Etapa | Testes | Onde | Resultado | Evidências |
+|---|---|---|---|---|
+| CP3 | T01 a T05 (fluxo, permissões, documento adulterado) | Remix VM, 09/11/2026 | 5 PASSOU | `evidencias/P1`–`P3`, `T01_*` a `T05_*` (.png) |
+| CP4, antes do ajuste | T01 a T19 no contrato do CP3 | EVM local, 13/11/2026 | 17 PASSOU, **T18 e T19 FALHOU** | `evidencias/CP4/CP4_antes_contrato_CP3.txt` |
+| CP4, depois do ajuste | T01 a T19 no contrato do CP4 (inclui a regressão de T01 a T05) | EVM local, 13/11/2026 | **19 PASSOU** | `evidencias/CP4/CP4_depois_contrato_CP4.txt` |
 
-Nota sobre a preparação: `P1` a `P3` foram capturadas depois dos testes, numa segunda implantação feita na mesma sessão (contrato `0xD7ACd2a9FD159E69Bb102A1ca21C9a3e3A5F771B`), com os nomes das entidades sem o sufixo "(ficticia)". A preparação do contrato usado nos testes (deploy, os dois `credenciarEmissor` e a consulta `emissores`) aparece no terminal da captura `T01_2_transacao.png`, todas com sucesso.
+| Categoria | Testes do CP4 |
+|---|---|
+| Permissões | T06 (credenciar sem ser administrador), T07 (descredenciar sem ser administrador), T08 (tomar a administração), T19 (administrador revoga por fraude) |
+| Entradas inválidas | T09 (hash vazio), T10 e T11 (motivo 0 e 4), T12 (endereço zero), T13 (nome vazio) |
+| Falhas / estado indevido | T14 (emitir hash já registrado), T15 (revogar duas vezes), T16 (revogar hash inexistente), T17 (emissor descredenciado emite), T18 (emissor descredenciado revoga) |
 
-Complemento: `evidencias/execucao_testes_local.txt` traz os mesmos T01 a T05 executados automaticamente numa EVM local (`src/teste_local.py`). O custo do T01 (94106 gas) foi igual no Remix e na execução local.
+Nota sobre o CP3: as capturas `P1` a `P3` foram feitas depois dos testes, numa segunda implantação na mesma sessão (contrato `0xD7ACd2a9FD159E69Bb102A1ca21C9a3e3A5F771B`); a preparação do contrato usado nos testes aparece no terminal da captura `T01_2_transacao.png`.
 
-## 6. Limitações e próximos passos
+## 6. Limitações e pendências para o CP5
 
-- **Remix VM** é uma blockchain simulada num único navegador: não tem rede P2P nem consenso entre nós, e o estado some ao recarregar.
+- **Remix VM** é uma blockchain simulada num único navegador: não tem rede P2P nem consenso, e o estado some ao recarregar.
 - A blockchain garante que o certificado **não foi alterado depois do registro**, mas não que o conteúdo é verdadeiro.
-- Governança centralizada num único administrador (simplificação do protótipo; ver CP2).
+- **Governança centralizada:** o administrador credencia, descredencia e, desde o CP4, pode revogar qualquer certificado. Restringir a revogação pelo administrador a fraude (motivo 2) ou exigir mais de uma assinatura fica como discussão para o CP5.
+- **Transferência da administração em uma etapa:** se o administrador digitar um endereço errado em `transferirAdministracao`, perde o controle sem volta. A correção usual (o novo administrador aceitar a transferência) fica registrada como limitação conhecida.
 - O hash é de um arquivo PDF; gerar o mesmo PDF em outro programa produz outro hash.
-- **CP4 (16/11):** testes de entradas inválidas e de governança (hash vazio, hash duplicado, motivo 0 e 4, revogar duas vezes, emissor descredenciado tentando emitir, conta comum credenciando ou transferindo a administração); versão em banco de dados (SQLite + Python) com as mesmas regras; medição de gas por operação.
-- **CP5 (23/11):** comparação final blockchain × banco de dados, relatório e pitch.
+- **CP5 (23/11):** comparação blockchain × banco de dados (versão SQLite com as mesmas regras, prevista desde o CP2), relatório final e pitch.
 
 ## 7. Fontes e uso de IA
 
-- **Contrato-base RastreioLote** (Aula 6, FEAP 2026.2): referência e ponto de partida. O grupo manteve a organização (papéis e estados em enum, padrão verificações → efeitos → evento, função de hash e consulta de estado para os testes) e trocou o domínio: lote → certificado identificado por hash, papéis fixos → cadastro de emissores com situação Ativo/Inativo, `administrador` imutável → transferível, keccak256 → **SHA-256** (o mesmo algoritmo usado para os PDFs).
-- **Simulação rastreio_lote_sim.py** (Aula 6): o formato da saída de testes de `teste_local.py` segue o da função `teste(...)`.
-- **Bibliotecas:** reportlab (geração dos PDFs fictícios), web3.py, eth-tester/py-evm e py-solc-x (execução local).
-- **IA generativa:** Claude (Anthropic) apoiou a escrita do contrato adaptado, dos scripts Python e deste README. A IA fez um ensaio da demonstração no Remix e escreveu o tutorial de execução; as evidências entregues foram executadas e capturadas pelo representante no Remix em 09/11/2026, e a IA conferiu cada captura com o resultado esperado. O grupo conferiu cada `require` com a tabela de permissões do CP2. Os detalhes estão nas seções 9 e 10 do formulário do CP3.
+- **Contrato-base RastreioLote** (Aula 6, FEAP 2026.2): ponto de partida. O grupo manteve a organização (papéis e estados em enum, padrão verificações → efeitos → evento, função de hash e consulta de estado) e trocou o domínio: lote → certificado identificado por hash, papéis fixos → cadastro de emissores Ativo/Inativo, `administrador` imutável → transferível, keccak256 → **SHA-256**.
+- **Simulação rastreio_lote_sim.py** (Aula 6): o formato da saída dos testes segue o da função `teste(...)`.
+- **Bibliotecas:** reportlab (PDFs fictícios), web3.py, eth-tester/py-evm e py-solc-x (execução local).
+- **IA generativa:** Claude (Anthropic) apoiou a escrita do contrato, dos scripts, dos testes do CP4 e deste README, e conferiu as capturas do CP3. Os testes do CP4 e a comparação antes/depois foram executados com `src/executar_testes.py`. Os detalhes estão na seção 6 do formulário do CP4.
+
+## 8. Estrutura do pacote
+
+```
+manifesto.json                     grupo, integrantes, trilha e arquivo principal
+README.md                          este arquivo
+src/CertChain.sol                  contrato atual (CP4)
+src/historico/CertChain_CP3.sol    contrato entregue no CP3 (para o antes/depois)
+src/executar_testes.py             bateria automatizada T01 a T19
+src/gerar_hash.py                  SHA-256 dos PDFs (formato bytes32)
+src/gerar_certificados_ficticios.py e src/certificados_ficticios/   certificados fictícios
+src/historico/teste_local_CP3.py   script de testes do CP3 (T01 a T05), mantido como histórico
+testes/casos.csv                   todos os testes, com esperado, observado, status e evidência
+evidencias/                        capturas do Remix (CP3) e saídas do CP4 em evidencias/CP4/
+```
