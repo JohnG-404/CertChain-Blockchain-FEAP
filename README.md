@@ -131,7 +131,7 @@ Depois do T05, sem recarregar a página, continuem com as mesmas contas. Dois ha
 | `CERT-0004 (teste CP4)` | `0xc76c97a1531928a0609ea173eef4ff74d8209d9b328830362bc0e495ef397fa5` |
 | `CERT-0005 (teste CP4)` | `0x867c729de9f12ffb3600160c264ffac1c9c07149b693f850c012e5fb6ef63bf9` |
 
-| ID | Conta | Chamada | Esperado (contrato do CP4) | Captura sugerida |
+| ID | Conta | Chamada | Esperado (contrato do CP4) | Captura |
 |---|---|---|---|---|
 | T06 | Conta 2 | `credenciarEmissor(Conta 4, "Entidade Indevida (ficticia)")` | revert `Somente o administrador` | `evidencias/CP4/T06_rejeicao.png` |
 | T07 | Conta 3 | `descredenciarEmissor(Conta 2)` | revert `Somente o administrador` | `evidencias/CP4/T07_rejeicao.png` |
@@ -140,7 +140,7 @@ Depois do T05, sem recarregar a página, continuem com as mesmas contas. Dois ha
 | T10 | Conta 2 | `revogarCertificado(CERT-0002, 0)` | revert `Motivo invalido`; CERT-0002 continua 1 | `evidencias/CP4/T10_rejeicao.png` |
 | T11 | Conta 2 | `revogarCertificado(CERT-0002, 4)` | revert `Motivo invalido` | `evidencias/CP4/T11_rejeicao.png` |
 | T12 | Conta 1 | `credenciarEmissor(0x0000000000000000000000000000000000000000, "Entidade X (ficticia)")` | revert `Conta invalida` | `evidencias/CP4/T12_rejeicao.png` |
-| T13 | Conta 1 | `credenciarEmissor(Conta 4, "")` (nome em branco) | revert `Nome da entidade vazio` | `evidencias/CP4/T13_rejeicao.png` |
+| T13 | Conta 1 | `credenciarEmissor(Conta 4, "")` (digitar `""` no campo do nome) | revert `Nome da entidade vazio` | `evidencias/CP4/T13_1_campo_vazio_remix.png`, `T13_2_rejeicao.png` |
 | T14 | Conta 2 | `emitirCertificado(CERT-0002)` (já Valido) | revert `Certificado ja registrado` | `evidencias/CP4/T14_rejeicao.png` |
 | T15 | Conta 2 | `revogarCertificado(CERT-0001, 1)` (já Revogado) | revert `Certificado nao esta valido` | `evidencias/CP4/T15_rejeicao.png` |
 | T16 | Conta 2 | `revogarCertificado(CERT-0003, 1)` (não existe) | revert `Certificado nao esta valido` | `evidencias/CP4/T16_rejeicao.png` |
@@ -149,7 +149,11 @@ Depois do T05, sem recarregar a página, continuem com as mesmas contas. Dois ha
 | T18 | Conta 3 | `revogarCertificado(CERT-0003, 2)` | revert `Emissor nao autorizado`; CERT-0003 continua 1 | `evidencias/CP4/T18_depois_CP4.png` |
 | T19 | Conta 1 | `revogarCertificado(CERT-0004 (teste CP4), 2)` | aceita; CERT-0004 vira 2 (Revogado) | `evidencias/CP4/T19_depois_CP4.png` |
 
-Para mostrar o **antes** do ajuste: implantem `src/historico/CertChain_CP3.sol` (Deploy de novo, pela Conta 1), credenciem a Conta 3, emitam com ela o CERT-0003 e o CERT-0004, descredenciem-na e repitam T18 e T19. No contrato do CP3, o T18 é aceito e o T19 é rejeitado (capturas `evidencias/CP4/T18_antes_CP3.png` e `T19_antes_CP3.png`).
+Para mostrar o **antes** do ajuste: implantem `src/historico/CertChain_CP3.sol` (Deploy de novo, pela Conta 1), credenciem a Conta 3, emitam com ela o CERT-0003 e o CERT-0004, descredenciem-na e repitam T18 e T19. No contrato do CP3, o T18 é aceito e o T19 é rejeitado (capturas `evidencias/CP4/T18_T19_preparacao_CP3.png`, `T18_antes_CP3.png` e `T19_antes_CP3.png`).
+
+**Atenção no Remix (T13):** deixar o campo `nomeEntidade` em branco não envia a transação; o Remix acusa erro de codificação dos argumentos (captura `T13_1_campo_vazio_remix.png`). Para enviar uma string vazia, digitem `""` no campo; aí o contrato rejeita com `Nome da entidade vazio` (`T13_2_rejeicao.png`).
+
+As capturas acima foram feitas em 13/11/2026 no Remix IDE 2.6.14, Remix VM (Osaka), compilador 0.8.28. Contrato do CP4 em `0xd9145CCE52D386f254917e481eB44e9943F39138` e contrato do CP3 (antes) em `0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99`, na mesma sessão.
 
 ### 4.5 Execução automatizada (todos os testes, T01 a T19)
 
@@ -173,6 +177,8 @@ O detalhamento de cada teste (conta, função, entradas, estado inicial, esperad
 | CP3 | T01 a T05 (fluxo, permissões, documento adulterado) | Remix VM, 09/11/2026 | 5 PASSOU | `evidencias/P1`–`P3`, `T01_*` a `T05_*` (.png) |
 | CP4, antes do ajuste | T01 a T19 no contrato do CP3 | EVM local, 13/11/2026 | 17 PASSOU, **T18 e T19 FALHOU** | `evidencias/CP4/CP4_antes_contrato_CP3.txt` |
 | CP4, depois do ajuste | T01 a T19 no contrato do CP4 (inclui a regressão de T01 a T05) | EVM local, 13/11/2026 | **19 PASSOU** | `evidencias/CP4/CP4_depois_contrato_CP4.txt` |
+| CP4, depois do ajuste | T06 a T19 no contrato do CP4 | Remix VM, 13/11/2026 | **14 PASSOU** | `evidencias/CP4/T06_*` a `T19_depois_CP4.png` |
+| CP4, antes do ajuste | T18 e T19 no contrato do CP3 | Remix VM, 13/11/2026 | **T18 e T19 FALHOU** (confirma a EVM local) | `evidencias/CP4/T18_T19_preparacao_CP3.png`, `T18_antes_CP3.png`, `T19_antes_CP3.png` |
 
 | Categoria | Testes do CP4 |
 |---|---|
@@ -196,7 +202,7 @@ Nota sobre o CP3: as capturas `P1` a `P3` foram feitas depois dos testes, numa s
 - **Contrato-base RastreioLote** (Aula 6, FEAP 2026.2): ponto de partida. O grupo manteve a organização (papéis e estados em enum, padrão verificações → efeitos → evento, função de hash e consulta de estado) e trocou o domínio: lote → certificado identificado por hash, papéis fixos → cadastro de emissores Ativo/Inativo, `administrador` imutável → transferível, keccak256 → **SHA-256**.
 - **Simulação rastreio_lote_sim.py** (Aula 6): o formato da saída dos testes segue o da função `teste(...)`.
 - **Bibliotecas:** reportlab (PDFs fictícios), web3.py, eth-tester/py-evm e py-solc-x (execução local).
-- **IA generativa:** Claude (Anthropic) apoiou a escrita do contrato, dos scripts, dos testes do CP4 e deste README, e conferiu as capturas do CP3. Os testes do CP4 e a comparação antes/depois foram executados com `src/executar_testes.py`. Os detalhes estão na seção 6 do formulário do CP4.
+- **IA generativa:** Claude (Anthropic) apoiou a escrita do contrato, dos scripts, dos testes do CP4 e deste README, e conferiu as capturas do CP3. Os testes do CP4 e a comparação antes/depois foram executados com `src/executar_testes.py` e também no Remix, que a IA operou no navegador do representante (extensão Claude in Chrome, só com as contas de teste do Remix VM); o grupo conferiu cada captura com o resultado esperado. Os detalhes estão na seção 6 do formulário do CP4.
 
 ## 8. Estrutura do pacote
 
@@ -210,5 +216,5 @@ src/gerar_hash.py                  SHA-256 dos PDFs (formato bytes32)
 src/gerar_certificados_ficticios.py e src/certificados_ficticios/   certificados fictícios
 src/historico/teste_local_CP3.py   script de testes do CP3 (T01 a T05), mantido como histórico
 testes/casos.csv                   todos os testes, com esperado, observado, status e evidência
-evidencias/                        capturas do Remix (CP3) e saídas do CP4 em evidencias/CP4/
+evidencias/                        capturas do Remix do CP3; em evidencias/CP4/, capturas do Remix do CP4 e saídas da EVM local
 ```
