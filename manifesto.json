@@ -1,36 +1,51 @@
 {
-  "checkpoint": "CP4",
   "disciplina": "Blockchain e Criptomoedas - Engenharia da Computacao - FEAP 2026.2",
-  "grupo": {
-    "codigo": null,
-    "observacao": "O grupo nao recebeu codigo nos checkpoints anteriores."
-  },
-  "projeto": {
-    "titulo": "CertChain: registro e verificacao de certificados de atividades complementares com blockchain",
-    "titulo_curto": "CertChain",
-    "repositorio": "https://github.com/JohnG-404/CertChain-Blockchain-FEAP"
-  },
+  "checkpoint": "CP5",
+  "grupo": "Sem codigo atribuido (o grupo nao recebeu codigo GXX nos checkpoints anteriores)",
+  "projeto": "CertChain: registro e verificacao de certificados de atividades complementares com blockchain",
   "representante": "João Gabriel Pereira Cardozo",
   "integrantes": [
-    {"nome": "Gabriel Bianco Sanches", "termo": "10º"},
-    {"nome": "Gabriel Santana dos Santos", "termo": "10º"},
-    {"nome": "Guilherme Monteiro da Luz", "termo": "10º"},
-    {"nome": "João Gabriel de Godoy Pereira", "termo": "10º"},
-    {"nome": "João Gabriel Pereira Cardozo", "termo": "10º"},
-    {"nome": "Lucas Vaz Barbosa", "termo": "10º"},
-    {"nome": "Lucas Nakamura Rodrigues", "termo": "10º"},
-    {"nome": "Pedro Lucas Campos", "termo": "8º"}
+    {
+      "nome": "Gabriel Bianco Sanches",
+      "termo": "10º"
+    },
+    {
+      "nome": "Gabriel Santana dos Santos",
+      "termo": "10º"
+    },
+    {
+      "nome": "Guilherme Monteiro da Luz",
+      "termo": "10º"
+    },
+    {
+      "nome": "João Gabriel de Godoy Pereira",
+      "termo": "10º"
+    },
+    {
+      "nome": "João Gabriel Pereira Cardozo",
+      "termo": "10º"
+    },
+    {
+      "nome": "Lucas Vaz Barbosa",
+      "termo": "10º"
+    },
+    {
+      "nome": "Lucas Nakamura Rodrigues",
+      "termo": "10º"
+    },
+    {
+      "nome": "Pedro Lucas Campos",
+      "termo": "8º"
+    }
   ],
-  "trilha": "Fundamental - contrato-base RastreioLote adaptado, Solidity no Remix VM",
-  "ambiente": {
-    "principal": "Remix IDE 2.6.13 (app.remix.live), Remix VM (Osaka)",
-    "complementar": "EVM local py-evm via eth-tester (src/executar_testes.py)",
-    "compilador": "solc 0.8.28, otimizacao desligada"
-  },
+  "trilha": "Fundamental (contrato-base RastreioLote adaptado; Solidity no Remix VM)",
+  "ambiente": "Remix IDE 2.6.14 (app.remix.live), Remix VM (Osaka), Solidity 0.8.28 sem otimizacao; complementar: Python 3 com web3.py e eth-tester/py-evm (src/executar_testes.py) e SQLite (src/comparacao_sqlite.py)",
   "arquivo_principal": "src/CertChain.sol",
+  "titulo_curto": "CertChain",
+  "repositorio": "https://github.com/JohnG-404/CertChain-Blockchain-FEAP",
   "versoes_do_contrato": {
     "CP3": "src/historico/CertChain_CP3.sol",
-    "CP4": "src/CertChain.sol"
+    "CP4_CP5_final": "src/CertChain.sol"
   },
   "testes": "testes/casos.csv",
   "evidencias": "evidencias/",

@@ -11,7 +11,7 @@ Requer Python 3.8+ e:
     pip install web3 "eth-tester[py-evm]" py-solc-x
 Uso (na pasta que contem src/):
     python src/historico/teste_local_CP3.py
-    python src/historico/teste_local_CP3.py > evidencias/execucao_testes_local.txt
+    python src/historico/teste_local_CP3.py > evidencias/execucao_local_CP3_T01-T05.txt
 
 Na primeira execucao, o py-solc-x baixa o compilador solc 0.8.28.
 Opcao: --artefato ARQUIVO.json usa ABI e bytecode ja compilados

@@ -1,0 +1,46 @@
+=== CertChain - blockchain (contrato) x banco de dados convencional (SQLite) ===
+Data/hora (UTC): 2026-11-17 04:04:30 | SQLite 3.53.1 | Python 3.13.18 
+
+=== Parte A - mesmas regras, mesmos cenarios (T01 a T19) no SQLite ===
+
+T01 emitir CERT-0001 | Account 2 (Emissor A) | esperado: aceita | observado: aceita; estado = Valido | PASSOU
+T02 revogar CERT-0001 (motivo 1) | Account 2 (Emissor A) | esperado: aceita | observado: aceita; estado = Revogado | PASSOU
+T03 Emissor B revoga CERT-0002 do Emissor A | Account 3 (Emissor B) | esperado: rejeitada: "Somente o emissor do certificado" | observado: rejeitada: "Somente o emissor do certificado"; estado = Valido | PASSOU
+T04 conta nao credenciada emite CERT-0003 | Account 4 (sem permissao) | esperado: rejeitada: "Emissor nao autorizado" | observado: rejeitada: "Emissor nao autorizado"; estado = Inexistente | PASSOU
+T05 verificar copia adulterada do CERT-0002 | Account 5 (verificador) | esperado: aceita | observado: aceita; adulterado = Inexistente, original = Valido | PASSOU
+T06 nao administrador credencia Account 4 | Account 2 (Emissor A) | esperado: rejeitada: "Somente o administrador" | observado: rejeitada: "Somente o administrador"; situacao = NaoCadastrado | PASSOU
+T07 nao administrador descredencia Emissor A | Account 3 (Emissor B) | esperado: rejeitada: "Somente o administrador" | observado: rejeitada: "Somente o administrador"; situacao = Ativo | PASSOU
+T08 conta sem permissao toma a administracao | Account 4 (sem permissao) | esperado: rejeitada: "Somente o administrador" | observado: rejeitada: "Somente o administrador"; administrador = Account 1 | PASSOU
+T09 emitir hash vazio | Account 2 (Emissor A) | esperado: rejeitada: "Hash vazio" | observado: rejeitada: "Hash vazio"; total = 2 | PASSOU
+T10 revogar com motivo 0 | Account 2 (Emissor A) | esperado: rejeitada: "Motivo invalido" | observado: rejeitada: "Motivo invalido"; estado = Valido | PASSOU
+T11 revogar com motivo 4 | Account 2 (Emissor A) | esperado: rejeitada: "Motivo invalido" | observado: rejeitada: "Motivo invalido"; estado = Valido | PASSOU
+T12 credenciar endereco zero | Account 1 (administrador) | esperado: rejeitada: "Conta invalida" | observado: rejeitada: "Conta invalida"; situacao = NaoCadastrado | PASSOU
+T13 credenciar com nome vazio | Account 1 (administrador) | esperado: rejeitada: "Nome da entidade vazio" | observado: rejeitada: "Nome da entidade vazio"; situacao = NaoCadastrado | PASSOU
+T14 emitir de novo o CERT-0002 | Account 2 (Emissor A) | esperado: rejeitada: "Certificado ja registrado" | observado: rejeitada: "Certificado ja registrado"; emissor e data inalterados | PASSOU
+T15 revogar de novo o CERT-0001 | Account 2 (Emissor A) | esperado: rejeitada: "Certificado nao esta valido" | observado: rejeitada: "Certificado nao esta valido"; estado = Revogado | PASSOU
+T16 revogar CERT-0003 inexistente | Account 2 (Emissor A) | esperado: rejeitada: "Certificado nao esta valido" | observado: rejeitada: "Certificado nao esta valido"; estado = Inexistente | PASSOU
+T17 emissor descredenciado emite CERT-0005 | Account 3 (Emissor B) | esperado: rejeitada: "Emissor nao autorizado" | observado: rejeitada: "Emissor nao autorizado"; estado = Inexistente | PASSOU
+T18 emissor descredenciado revoga CERT-0003 | Account 3 (Emissor B) | esperado: rejeitada: "Emissor nao autorizado" | observado: rejeitada: "Emissor nao autorizado"; estado = Valido | PASSOU
+T19 administrador revoga CERT-0004 (fraude) | Account 1 (administrador) | esperado: aceita | observado: aceita; estado = Revogado | PASSOU
+
+Parte A: 19 de 19 cenarios com o mesmo resultado do contrato.
+
+=== Parte B - alteracao direta por quem administra o banco (fora das regras) ===
+
+Antes:  CERT-0001 = Revogado | CERT-0002 emissor = Account 2 (Emissor A) | eventos registrados = 10
+SQL executado: UPDATE certificados SET estado='Valido' ... (CERT-0001); UPDATE certificados SET emissor=Account 4 (CERT-0002); DELETE FROM eventos ... (1 evento apagado)
+Depois: CERT-0001 = Valido | CERT-0002 emissor = Account 4 (sem permissao) | eventos registrados = 9
+Resultado: o verificador passa a ver o CERT-0001 como Valido e o CERT-0002 como emitido pela Account 4. Nenhuma regra da aplicacao foi acionada e o log nao guarda rastro da mudanca.
+No contrato nao existe operacao que leve um certificado de Revogado para Valido nem que troque o emissor; o historico de transacoes e os eventos ficam no bloco. Numa rede real (varios nos e consenso), reescrever isso exigiria controlar a maioria da rede. No Remix VM (um unico no, no navegador) essa garantia NAO e demonstrada: quem controla o navegador pode reiniciar a cadeia.
+
+=== Parte C - desempenho, custo e espaco (n = 200 certificados) ===
+
+SQLite (arquivo local, commit por operacao): emitir 0.414 ms | revogar 0.285 ms | consultar 0.0027 ms | arquivo 128.0 KiB (655 bytes/certificado, com indices e log)
+Contrato na EVM local (py-evm, 1 no, sem rede): emitir 47.9 ms | revogar 49.8 ms | consultar 5.58 ms
+Gas: implantacao 1979400 | emitir 77090 (min 76982, max 94106) | revogar 37172 | consultar 0 (leitura view)
+  (a primeira emissao custa mais porque grava totalCertificados pela primeira vez: escrever num slot zerado custa mais que atualizar um slot ja usado)
+Armazenamento on-chain: 2 slots de 32 bytes por certificado (64 bytes), replicados em todos os nos de uma rede real.
+Custo ilustrativo a 1 gwei/gas: emitir = 0.000077 ETH por certificado; 200 certificados = 0.0154 ETH (o preco do gas e do ETH variam; Remix VM e gratis)
+Custo ilustrativo a 10 gwei/gas: emitir = 0.000771 ETH por certificado; 200 certificados = 0.1542 ETH (o preco do gas e do ETH variam; Remix VM e gratis)
+Observacao: a EVM local executa sem rede, sem mineracao e sem consenso. Numa rede publica, cada transacao ainda espera a inclusao num bloco (no Ethereum, um bloco a cada 12 s) e a finalizacao.
+
