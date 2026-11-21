@@ -6,7 +6,7 @@ Protótipo do Projeto Integrador de Blockchain e Criptomoedas (FEAP 2026.2). Um 
 
 | Item | Resposta |
 |---|---|
-| Código do grupo | Não há (o grupo não recebeu código GXX) |
+| Código do grupo | G01 (CP1-G01, Grupo 01 na relação do professor) |
 | Título | CertChain: registro e verificação de certificados de atividades complementares com blockchain |
 | Disciplina | Blockchain e Criptomoedas — Engenharia da Computação — FEAP 2026.2 |
 | Trilha | Fundamental: contrato-base RastreioLote adaptado, executado no **Remix VM** |
